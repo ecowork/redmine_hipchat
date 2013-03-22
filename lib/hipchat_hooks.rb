@@ -134,9 +134,12 @@ class NotificationHook < Redmine::Hook::Listener
     http.use_ssl = true
     http.verify_mode = OpenSSL::SSL::VERIFY_NONE
     begin
-      http.start do |connection|
-        connection.request(req)
+      job = fork do
+        http.start do |connection|
+          connection.request(req)
+        end
       end
+      Process.detach(job)
     rescue Net::HTTPBadResponse => e
       Rails.logger.error "Error hitting HipChat API: #{e}"
     end
