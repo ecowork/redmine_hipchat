@@ -12,11 +12,13 @@ class NotificationHook < Redmine::Hook::Listener
     subject = CGI::escapeHTML(issue.subject)
     url     = get_url(issue)
 
-    assigned_message = issue.assigned_to.nil? ? "NULL" : "#{issue.assigned_to.name}"
+    status = CGI::escapeHTML(issue.status.name)
+    assignee = CGI::escapeHTML(issue.assigned_to.name) unless issue.assigned_to.nil?
+    description = CGI::escapeHTML(truncate(issue.description)) unless issue.description.blank?
 
-    text =   "#{author} 建立 #{tracker} <a href='#{url}'> ##{issue.id} </a> : #{subject}"
-    text +=  "狀態:「#{issue.status.name}」. 分派給:「#{assigned_message}」. 意見:「#{truncate(issue.description)}」"
-
+    text =  "#{author} reported #{tracker} <a href=\"#{url}\"> ##{issue.id} </a>: #{subject} [#{status}]"
+    text += "[#{assignee}]" if assignee
+    text += " #{description}" if description
 
     data          = {}
     data[:text]   = text
@@ -33,16 +35,19 @@ class NotificationHook < Redmine::Hook::Listener
     issue   = context[:issue]
     project = issue.project
     journal = context[:journal]
-    editor = journal.user
-    tracker = CGI::escapeHTML(issue.tracker.name.downcase)
-    assigned_message = issue_assigned_changed?(issue)
-    status_message = issue_status_changed?(issue)
-    url     = get_url(issue)
-    subject = CGI::escapeHTML(issue.subject)
 
-    text = ""
-    text += "#{editor.name} 編輯 #{tracker} <a href='#{url}'> ##{issue.id} </a> : #{subject}"
-    text += "狀態:「#{status_message}」. 分派給:「#{assigned_message}」. 意見:「#{truncate(journal.notes)}」"
+    editor  = CGI::escapeHTML(journal.user.name)
+    tracker = CGI::escapeHTML(issue.tracker.name.downcase)
+    subject = CGI::escapeHTML(issue.subject)
+    url     = get_url(issue)
+
+    status = issue_status_changed?(issue)
+    assignee = CGI::escapeHTML(issue_assigned_changed?(issue)) unless issue_assigned_changed?(issue).blank?
+    comment = CGI::escapeHTML(truncate(journal.notes)) unless journal.notes.blank?
+
+    text =  "#{editor} updated #{tracker} <a href=\"#{url}\"> ##{issue.id} </a>: #{subject} [#{status}]"
+    text += "[#{assignee}]" if assignee
+    text += " #{comment}" if comment
 
     data          = {}
     data[:text]   = text
@@ -152,9 +157,9 @@ class NotificationHook < Redmine::Hook::Listener
   def issue_status_changed?(issue)
     if issue.status_id_changed?
       old_status = IssueStatus.find(issue.status_id_was)
-      "從 #{old_status.name} 變更為 #{issue.status.name}"
+      "#{old_status.name} -> #{issue.status.name}"
     else
-      "#{issue.status.name}"
+      issue.status.name
     end
   end
 
@@ -162,11 +167,11 @@ class NotificationHook < Redmine::Hook::Listener
   def issue_assigned_changed?(issue)
     if issue.assigned_to_id_changed?
       old_assigned_to = User.find(issue.assigned_to_id_was) rescue nil
-      old_assigned = old_assigned_to.nil? ? "無" : "#{old_assigned_to.lastname} #{old_assigned_to.firstname}"
-      new_assigned = issue.assigned_to.nil? ? "無" : "#{issue.assigned_to.lastname} #{issue.assigned_to.firstname}"
-      "從 #{old_assigned} 變更為 #{new_assigned}"
+      old_assigned = old_assigned_to.nil? ? 'None' : old_assigned_to.name
+      new_assigned = issue.assigned_to.nil? ? 'None' : issue.assigned_to.name
+      "#{old_assigned} -> #{new_assigned}"
     else
-      issue.assigned_to.nil? ? "無" : "#{issue.assigned_to.lastname} #{issue.assigned_to.firstname}"
+      issue.assigned_to.name unless issue.assigned_to.nil?
     end
   end
 end
