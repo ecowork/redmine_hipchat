@@ -14,7 +14,7 @@ class NotificationHook < Redmine::Hook::Listener
 
     status = CGI::escapeHTML(issue.status.name)
     assignee = CGI::escapeHTML(issue.assigned_to.name) unless issue.assigned_to.nil?
-    description = CGI::escapeHTML(issue.description.gsub(/\n/, '<br>')) unless issue.description.blank?
+    description = CGI::escapeHTML(issue.description).gsub(/\n/, '<br>') unless issue.description.blank?
 
     text =  "#{author} reported #{tracker} <a href=\"#{url}\"> ##{issue.id} </a>: #{subject} [#{status}]"
     text += "[#{assignee}]" if assignee
@@ -43,7 +43,7 @@ class NotificationHook < Redmine::Hook::Listener
 
     status = issue_status_changed?(issue)
     assignee = CGI::escapeHTML(issue_assigned_changed?(issue)) unless issue_assigned_changed?(issue).blank?
-    comment = CGI::escapeHTML(journal.notes.gsub(/\n/, '<br>')) unless journal.notes.blank?
+    comment = CGI::escapeHTML(journal.notes).gsub(/\n/, '<br>') unless journal.notes.blank?
 
     text =  "#{editor} updated #{tracker} <a href=\"#{url}\"> ##{issue.id} </a>: #{subject} [#{status}]"
     text += "[#{assignee}]" if assignee
